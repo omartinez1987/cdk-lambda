@@ -31,7 +31,7 @@ export class CdkLambdaStack extends cdk.Stack {
       handler: 'index.handler',
 
       code: lambda.Code.fromAsset(
-        path.join(__dirname, '../src/lambda')
+        path.join(__dirname, '../lib/src/lambda')
       ),
 
       timeout: cdk.Duration.seconds(30),
