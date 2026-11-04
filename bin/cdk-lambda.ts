@@ -3,6 +3,32 @@ import * as cdk from 'aws-cdk-lib/core';
 import { CdkLambdaStack } from '../lib/cdk-lambda-stack';
 
 const app = new cdk.App();
+const environments = {
+  dev: {
+    account: '639251695665',
+    region: 'us-east-1'
+  },
+  qa: {
+    account: '639251695665',
+    region: 'us-east-1'
+  },
+  prod: {
+    account: '639251695665',
+    region: 'us-east-1'
+  }
+};
+
+const environment =
+  process.env.CDK_ENV || 'dev';
+
+const config = environments[
+  environment as keyof typeof environments
+];
+
+if (!config) {
+  throw new Error(`Unknown environment: ${environment}`);
+}
+
 new CdkLambdaStack(app, 'CdkLambdaStack', {
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
@@ -17,4 +43,5 @@ new CdkLambdaStack(app, 'CdkLambdaStack', {
   // env: { account: '123456789012', region: 'us-east-1' },
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+  
 });

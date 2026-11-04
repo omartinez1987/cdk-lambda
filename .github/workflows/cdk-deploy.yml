@@ -1,0 +1,167 @@
+
+name: AWS CDK CI/CD
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # -----------------------------
+  # CI: Build, test and validate
+  # -----------------------------
+  validate:
+    name: Build and Validate CDK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile TypeScript
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: CDK Synth
+        run: npx cdk synth
+        env:
+          CDK_ENV: dev
+
+      - name: Security scan with Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: cdk.out
+          framework: cloudformation
+          soft_fail: false
+
+  # -----------------------------
+  # Deploy to DEV
+  # -----------------------------
+  deploy-dev:
+    name: Deploy DEV
+    needs: validate
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    environment: dev
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: CDK Synth
+        run: npx cdk synth
+        env:
+          CDK_ENV: dev
+
+      - name: Deploy CloudFormation stack
+        run: npx cdk deploy --all --require-approval never
+
+  # -----------------------------
+  # Deploy to QA
+  # -----------------------------
+  deploy-qa:
+    name: Deploy QA
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+
+    environment: qa
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: CDK Synth
+        run: npx cdk synth
+        env:
+          CDK_ENV: qa
+
+      - name: Deploy CloudFormation stack
+        run: npx cdk deploy --all --require-approval never
+
+  # -----------------------------
+  # Deploy to PROD
+  # -----------------------------
+  deploy-prod:
+    name: Deploy PRODUCTION
+    needs: deploy-qa
+    runs-on: ubuntu-latest
+
+    environment: production
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: CDK Synth
+        run: npx cdk synth
+        env:
+          CDK_ENV: prod
+
+      - name: Deploy CloudFormation stack
+        run: npx cdk deploy --all --require-approval never
