@@ -5,15 +5,15 @@ import { CdkLambdaStack } from '../lib/cdk-lambda-stack';
 const app = new cdk.App();
 const environments = {
   dev: {
-    account: '639251695665',
+    account: '654654593512',
     region: 'us-east-1'
   },
   qa: {
-    account: '639251695665',
+    account: '654654593512',
     region: 'us-east-1'
   },
   prod: {
-    account: '639251695665',
+    account: '654654593512',
     region: 'us-east-1'
   }
 };
